@@ -1,0 +1,426 @@
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <fstream>
+using namespace std;
+
+struct FamilyMembers {
+    int working;
+    int studying;
+};
+
+struct MonthlyBudget {
+    int totalMembers;
+    FamilyMembers family;
+    double income;
+    double fixedExpenses;
+    double dailyTransportCost;
+    int travelDays;
+    double weeklyGroceries;
+    double dailySmallPurchases;
+    double yearlyEducationPerStudent;
+    double transportation;
+    double groceries;
+    double smallPurchases;
+    double education;
+};
+
+int inputCount(const string& message) { // gets a valid non-negative whole number
+    int value;
+    while (true) {
+        cout << "Estimate input: " << message;
+        if (cin >> value && value >= 0) {
+            return value;
+        }
+        cout << "Error: enter a whole number that is zero or greater.\n";
+        cin.clear();
+        cin.ignore(10000, '\n');
+    }
+}
+
+double inputAmount(const string& message) { // gets a valid non-negative amount
+    double value;
+    while (true) {
+        cout << "Estimate input: " << message;
+        if (cin >> value && value >= 0) {
+            return value;
+        }
+        cout << "Error: enter a number that is zero  or greater.\n";
+        cin.clear();
+        cin.ignore(10000, '\n');
+    }
+}
+
+void recalculateBudget(MonthlyBudget& budget) { // recalculates monthly expenses after changes
+    budget.transportation = budget.dailyTransportCost * budget.travelDays;
+    budget.groceries = budget.weeklyGroceries * 52 / 12;
+    budget.smallPurchases = budget.dailySmallPurchases * 30;
+    budget.education = budget.yearlyEducationPerStudent
+                     * budget.family.studying / 10;
+}
+
+MonthlyBudget inputHouseholdBudget() { // collects household and financial information
+    MonthlyBudget budget{};
+    budget.totalMembers = inputCount("Number of people in the family: ");
+
+    while (true) {
+        budget.family.working = inputCount("Number of family members working: ");
+        budget.family.studying = inputCount("Number of family members studying: ");
+        if (budget.family.working + budget.family.studying <= budget.totalMembers) {
+            break;
+        }
+        cout << "Working and studying members cannot exceed the family size. Try again.\n";
+    }
+
+    cout << "\nEnter the family's estimated monthly financial information.\n";
+    budget.income = inputAmount("Combined monthly income: ");
+    budget.fixedExpenses = inputAmount("Fixed monthly expenses: ");
+    budget.dailyTransportCost = inputAmount("Daily transport cost: ");
+    budget.travelDays = inputCount("Number of travel days per month: ");
+    budget.weeklyGroceries = inputAmount("Weekly grocery spending, including meals: ");
+    budget.dailySmallPurchases = inputAmount("Daily small purchases (wants): ");
+    budget.yearlyEducationPerStudent = inputAmount("Yearly education expenses per student: ");
+    recalculateBudget(budget);
+    return budget;
+}
+
+double calculateTotalExpenses(const MonthlyBudget& budget) { // calculates total monthly expenses
+    return budget.fixedExpenses
+         + budget.transportation
+         + budget.groceries
+         + budget.smallPurchases
+         + budget.education;
+}
+
+void displayBudget(const MonthlyBudget& budget) { // displays the budget and financial status
+    double total = calculateTotalExpenses(budget);
+    double remaining = budget.income - total;
+    cout << fixed << setprecision(2);
+    cout << "\n========== ESTIMATED FAMILY MONTHLY BUDGET ==========\n";
+    cout << "Family members: " << budget.totalMembers
+         << " (Working: " << budget.family.working
+         << ", Studying: " << budget.family.studying
+         << ", Other: " << budget.totalMembers - budget.family.working - budget.family.studying
+         << ")\n";
+    cout << "Estimated combined monthly income: PHP "
+         << budget.income << '\n';
+    cout << "Estimated fixed monthly expenses: PHP "
+         << budget.fixedExpenses << '\n';
+    cout << "Estimated transportation: PHP "
+         << budget.transportation << '\n';
+    cout << "Estimated groceries and meals: PHP "
+         << budget.groceries << '\n';
+    cout << "Estimated small purchases: PHP "
+         << budget.smallPurchases << '\n';
+    cout << "Estimated education: PHP "
+         << budget.education << '\n';
+    cout << "Estimated total monthly expenses: PHP "
+         << total << '\n';
+
+    if (remaining >= 0) {
+        cout << "Estimated money remaining after expenses: PHP "
+             << remaining << '\n';
+    }
+    else {
+        cout << "Estimated monthly shortfall: PHP "
+             << -remaining << '\n';
+    }
+
+    if (budget.income <= 0) {
+        cout << "Estimated status: Critical (income is zero).\n";
+    }
+    else {
+        double percent = remaining / budget.income * 100;
+        if (percent >= 20) {
+            cout << "Estimated status: Stable";
+        }
+        else if (percent >= 5) {
+            cout << "Estimated status: Needs Adjustment";
+        }
+        else {
+            cout << "Estimated status: Critical";
+        }
+        cout << " (" << percent << "% of income remaining)\n";
+    }
+    cout << "===========================================\n";
+}
+
+void displayExpenseRanking(const MonthlyBudget& budget) { // displays expenses from highest to lowest
+    string names[5] = {
+        "Fixed monthly expenses",
+        "Transportation",
+        "Groceries",
+        "Small purchases",
+        "Education"
+    };
+    double amounts[5] = {
+        budget.fixedExpenses,
+        budget.transportation,
+        budget.groceries,
+        budget.smallPurchases,
+        budget.education
+    };
+
+    for (int i = 0; i < 4; i++) {
+        for (int j = i + 1; j < 5; j++) {
+            if (amounts[j] > amounts[i]) {
+                double tempAmount = amounts[i];
+                amounts[i] = amounts[j];
+                amounts[j] = tempAmount;
+                string tempName = names[i];
+                names[i] = names[j];
+                names[j] = tempName;
+            }
+        }
+    }
+
+    cout << "\n===== ESTIMATED EXPENSE RANKING: HIGHEST TO LOWEST =====\n";
+    for (int i = 0; i < 5; i++) {
+        cout << "Estimated rank " << i + 1 << ": "
+             << names[i] << " - "
+             << fixed << setprecision(2) << amounts[i] << '\n';
+    }
+}
+
+void updateBudget(MonthlyBudget& budget) { // allows users to update individual budget information
+    while (true) {
+        cout << "\n===== CHOOSE WHAT TO UPDATE =====\n";
+        cout << "1. Total family members\n";
+        cout << "2. Working family members\n";
+        cout << "3. Studying family members\n";
+        cout << "4. Monthly income\n";
+        cout << "5. Fixed monthly expenses\n";
+        cout << "6. Daily transport cost\n";
+        cout << "7. Travel days per month\n";
+        cout << "8. Weekly groceries\n";
+        cout << "9. Daily small purchases\n";
+        cout << "10. Yearly education expenses per student\n";
+        cout << "0. Return to main menu\n";
+
+        int selected = inputCount("Choose an option: ");
+        int count;
+        switch (selected) {
+        case 0:
+            return;
+        case 1:
+            count = inputCount("New total family members: ");
+            if (count < budget.family.working + budget.family.studying) {
+                cout << "Cannot be fewer than working and studying members combined.\n";
+                continue;
+            }
+            budget.totalMembers = count;
+            break;
+        case 2:
+            count = inputCount("New number of working members: ");
+            if (count + budget.family.studying > budget.totalMembers) {
+                cout << "Working and studying members exceed the family size.\n";
+                continue;
+            }
+            budget.family.working = count;
+            break;
+        case 3:
+            count = inputCount("New number of studying members: ");
+            if (count + budget.family.working > budget.totalMembers) {
+                cout << "Working and studying members exceed the family size.\n";
+                continue;
+            }
+            budget.family.studying = count;
+            break;
+        case 4:
+            budget.income = inputAmount("New monthly income: ");
+            break;
+        case 5:
+            budget.fixedExpenses = inputAmount("New fixed monthly expenses: ");
+            break;
+        case 6:
+            budget.dailyTransportCost = inputAmount("New daily transport cost: ");
+            break;
+        case 7:
+            budget.travelDays = inputCount("New travel days per month: ");
+            break;
+        case 8:
+            budget.weeklyGroceries = inputAmount("New weekly groceries: ");
+            break;
+        case 9:
+            budget.dailySmallPurchases = inputAmount("New daily small purchases: ");
+            break;
+        case 10:
+            budget.yearlyEducationPerStudent = inputAmount(
+                "New yearly education cost per student: "
+            );
+            break;
+        default:
+            cout << "Invalid choice. Select 0 through 10.\n";
+            continue;
+        }
+        recalculateBudget(budget);
+        cout << "Budget updated. Choose Save to TXT to keep this change after exit.\n";
+    }
+}
+
+bool saveBudgetToFile(const MonthlyBudget& budget) { // saves household information to budget.txt
+    ofstream file("budget.txt");
+    if (!file) {
+        return false;
+    }
+    file << setprecision(17);
+    file << "TotalMembers " << budget.totalMembers << '\n';
+    file << "WorkingMembers " << budget.family.working << '\n';
+    file << "StudyingMembers " << budget.family.studying << '\n';
+    file << "MonthlyIncome " << budget.income << '\n';
+    file << "FixedExpenses " << budget.fixedExpenses << '\n';
+    file << "DailyTransportCost " << budget.dailyTransportCost << '\n';
+    file << "TravelDays " << budget.travelDays << '\n';
+    file << "WeeklyGroceries " << budget.weeklyGroceries << '\n';
+    file << "DailySmallPurchases " << budget.dailySmallPurchases << '\n';
+    file << "YearlyEducationPerStudent "
+         << budget.yearlyEducationPerStudent << '\n';
+    file.close();
+    return !file.fail();
+}
+
+bool readIntField(ifstream& file, const string& expected, int& value) { // reads saved whole numbers
+    string label;
+    return bool(file >> label >> value) && label == expected;
+}
+
+bool readAmountField(ifstream& file, const string& expected, double& value) { // reads saved amounts
+    string label;
+    return bool(file >> label >> value) && label == expected;
+}
+
+bool loadBudgetFromFile(MonthlyBudget& budget) { // automatically loads saved budget information
+    ifstream file("budget.txt");
+    if (!file) {
+        return false;
+    }
+    MonthlyBudget saved{};
+    if (!readIntField(file, "TotalMembers", saved.totalMembers) ||
+        !readIntField(file, "WorkingMembers", saved.family.working) ||
+        !readIntField(file, "StudyingMembers", saved.family.studying) ||
+        !readAmountField(file, "MonthlyIncome", saved.income) ||
+        !readAmountField(file, "FixedExpenses", saved.fixedExpenses) ||
+        !readAmountField(file, "DailyTransportCost", saved.dailyTransportCost) ||
+        !readIntField(file, "TravelDays", saved.travelDays) ||
+        !readAmountField(file, "WeeklyGroceries", saved.weeklyGroceries) ||
+        !readAmountField(file, "DailySmallPurchases", saved.dailySmallPurchases) ||
+        !readAmountField(file, "YearlyEducationPerStudent", saved.yearlyEducationPerStudent)) {
+        return false;
+    }
+    if (saved.totalMembers < 0 ||
+        saved.family.working < 0 ||
+        saved.family.studying < 0 ||
+        saved.family.working + saved.family.studying > saved.totalMembers ||
+        saved.income < 0 ||
+        saved.fixedExpenses < 0 ||
+        saved.dailyTransportCost < 0 ||
+        saved.travelDays < 0 ||
+        saved.weeklyGroceries < 0 ||
+        saved.dailySmallPurchases < 0 ||
+        saved.yearlyEducationPerStudent < 0) {
+        return false;
+    }
+    recalculateBudget(saved);
+    budget = saved;
+    return true;
+}
+
+bool clearBudgetFile() { // clears the contents of budget.txt
+    ofstream file("budget.txt", ios::trunc);
+    if (!file) {
+        return false;
+    }
+    file.close();
+    return !file.fail();
+}
+
+int main() {
+    cout << "FAMILY MEMBERS AND MONTHLY BUDGET ESTIMATE PROGRAM\n";
+    MonthlyBudget budget{};
+    bool hasBudget = loadBudgetFromFile(budget); // loads saved information when the program starts
+
+    if (hasBudget) {
+        cout << "Previous budget loaded from budget.txt.\n";
+    }
+
+    while (true) {
+        cout << "\n===== BUDGET MENU =====\n";
+        cout << "1. Create budget\n";
+        cout << "2. View budget\n";
+        cout << "3. Update budget (choose a field)\n";
+        cout << "4. Delete budget and clear TXT file\n";
+        cout << "5. Save budget to TXT file\n";
+        cout << "6. Exit\n";
+        cout << "Choose an option: ";
+
+        int choice;
+        if (!(cin >> choice)) {
+            if (cin.eof()) {
+                break;
+            }
+            cout << "Invalid input. Enter a number from 1 to 6.\n";
+            cin.clear();
+            cin.ignore(10000, '\n');
+            continue;
+        }
+
+        switch (choice) {
+        case 1: // create
+            if (hasBudget) {
+                cout << "A budget already exists. Choose Update to change it.\n";
+                break;
+            }
+            budget = inputHouseholdBudget();
+            hasBudget = true;
+            cout << "Budget created. Select 5 to save it to budget.txt.\n";
+            break;
+        case 2: // read
+            if (!hasBudget) {
+                cout << "No budget to view. Create a budget first.\n";
+                break;
+            }
+            displayBudget(budget);
+            displayExpenseRanking(budget);
+            break;
+        case 3: // update
+            if (!hasBudget) {
+                cout << "No budget to update. Create a budget first.\n";
+                break;
+            }
+            updateBudget(budget);
+            break;
+        case 4: // delete
+            if (!hasBudget) {
+                cout << "No budget to delete.\n";
+                break;
+            }
+            if (clearBudgetFile()) {
+                budget = {};
+                hasBudget = false;
+                cout << "Budget deleted and budget.txt contents cleared.\n";
+            }
+            else {
+                cout << "Could not clear budget.txt. Budget was not deleted.\n";
+            }
+            break;
+        case 5: // save to .txt
+            if (!hasBudget) {
+                cout << "No budget to save. Create one first.\n";
+                break;
+            }
+            if (saveBudgetToFile(budget)) {
+                cout << "Budget saved to budget.txt successfully.\n";
+            }
+            else {
+                cout << "Error: could not save budget.txt.\n";
+            }
+            break;
+        case 6: // exit
+            cout << "Exiting program.\n";
+            return 0;
+        default:
+            cout << "Invalid choice. Enter a number from 1 to 6.\n";
+        }
+    }
+    return 0;
+}
